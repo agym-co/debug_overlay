@@ -59,6 +59,11 @@ class _LogsDebugHelperState extends State<LogsDebugHelper> {
       title: widget.title,
       actions: [
         IconButton(
+          tooltip: 'Copy logs',
+          onPressed: _copyToClipBoard,
+          icon: const Icon(Icons.copy_all),
+        ),
+        IconButton(
           tooltip: 'Clear logs',
           onPressed: widget.logs.clear,
           icon: const Icon(Icons.delete_outlined),
@@ -98,6 +103,27 @@ class _LogsDebugHelperState extends State<LogsDebugHelper> {
           );
         },
       ),
+    );
+  }
+
+  Future<void> _copyToClipBoard() async {
+    await Clipboard.setData(
+      ClipboardData(
+        text: widget.logs.logs
+            .map(
+              (l) => _logToText(
+                l,
+                l.level.index >= DiagnosticLevel.error.index ? 'Error' : 'Data',
+              ),
+            )
+            .join('\n'),
+      ),
+    );
+
+    if (!context.mounted) return;
+    // ignore: use_build_context_synchronously, https://github.com/dart-lang/linter/issues/4007
+    context.scaffoldMessenger.showSnackBar(
+      const SnackBar(content: Text('Copied!')),
     );
   }
 }
@@ -194,7 +220,7 @@ class LogEntryWidget extends StatelessWidget {
   Widget _buildSubtitle(BuildContext context, String text) =>
       Text(text, style: Theme.of(context).textTheme.titleSmall);
   Widget _buildError(BuildContext context) {
-    final json = _errorToJsonListOrMap();
+    final json = _errorToJsonListOrMap(log);
     if (json != null) {
       return JsonView(
         shrinkWrap: true,
@@ -210,14 +236,7 @@ class LogEntryWidget extends StatelessWidget {
   }
 
   Future<void> _copyToClipboard(BuildContext context) async {
-    final error = log.error == null ? null : _stringify(log.error as Object);
-    final stackTrace = log.stackTrace?.toString();
-    final text = [
-      '${log.timestamp}: ${log.message}',
-      if (error != null) '$_errorLabel: $error',
-      if (stackTrace != null) 'Stack Trace: $stackTrace',
-    ].join('\n');
-    await Clipboard.setData(ClipboardData(text: text));
+    await Clipboard.setData(ClipboardData(text: _logToText(log, _errorLabel)));
 
     // ignore: use_build_context_synchronously, https://github.com/dart-lang/linter/issues/4007
     if (!context.mounted) return;
@@ -225,95 +244,36 @@ class LogEntryWidget extends StatelessWidget {
         .showSnackBar(const SnackBar(content: Text('Copied!')));
   }
 
-  String _stringify(Object object) {
-    if (object is String) return object.trim();
-    if (object is DiagnosticsNode) return object.toStringDeep();
-
-    try {
-      // ignore: avoid_dynamic_calls
-      (object as dynamic).toJson();
-      // It supports `toJson()`.
-
-      dynamic toEncodable(dynamic object) {
-        try {
-          // ignore: avoid_dynamic_calls
-          return object.toJson();
-          // ignore: avoid_catches_without_on_clauses
-        } catch (_) {}
-        try {
-          return '$object';
-          // ignore: avoid_catches_without_on_clauses
-        } catch (_) {}
-        return describeIdentity(object);
-      }
-
-      return JsonEncoder.withIndent('  ', toEncodable).convert(object);
-      // ignore: avoid_catches_without_on_clauses
-    } catch (_) {}
-
-    try {
-      return '$object'.trim();
-      // ignore: avoid_catches_without_on_clauses
-    } catch (_) {}
-    return describeIdentity(object);
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(DiagnosticsProperty<Log>('log', log));
   }
+}
 
-  dynamic _errorToJsonListOrMap() {
-    bool isJson(Object? object) {
-      if (object == null ||
-          object is bool ||
-          object is num ||
-          object is String) {
-        return true;
-      }
-      if (object is List) return object.every(isJson);
-      if (object is Map) {
-        return object.keys.every((it) => it is String) &&
-            object.values.every(isJson);
-      }
+String _logToText(Log log, String errorLabel) {
+  final error = log.error == null ? null : _stringify(log.error as Object);
+  final stackTrace = log.stackTrace?.toString();
+  return [
+    '${log.timestamp}: ${log.message}',
+    if (error != null) '$errorLabel: $error',
+    if (stackTrace != null) 'Stack Trace: $stackTrace',
+  ].join('\n');
+}
 
+String _stringify(Object object) {
+  if (object is String) return object.trim();
+  if (object is DiagnosticsNode) return object.toStringDeep();
+
+  try {
+    // ignore: avoid_dynamic_calls
+    (object as dynamic).toJson();
+    // It supports `toJson()`.
+
+    dynamic toEncodable(dynamic object) {
       try {
         // ignore: avoid_dynamic_calls
-        (object as dynamic).toJson();
-        return true;
-        // ignore: avoid_catches_without_on_clauses
-      } catch (_) {}
-      return false;
-    }
-
-    bool isJsonListOrMap(Object? object) {
-      if (object is List || object is Map) return isJson(object);
-
-      try {
-        // ignore: avoid_dynamic_calls
-        return isJsonListOrMap((object as dynamic).toJson());
-        // ignore: avoid_catches_without_on_clauses
-      } catch (_) {}
-      return false;
-    }
-
-    if (!isJsonListOrMap(log.error!)) return null;
-
-    dynamic toJson(Object? object) {
-      if (object == null ||
-          object is bool ||
-          object is num ||
-          object is String) {
-        return object;
-      }
-      if (object is List) return object.map(toJson).toList();
-      if (object is Map) {
-        final entries = <String, dynamic>{};
-        for (final entry in object.entries) {
-          if (entry.key is! String) return null;
-          entries[entry.key as String] = toJson(entry.value);
-        }
-        return entries;
-      }
-
-      try {
-        // ignore: avoid_dynamic_calls
-        return toJson((object as dynamic).toJson());
+        return object.toJson();
         // ignore: avoid_catches_without_on_clauses
       } catch (_) {}
       try {
@@ -323,14 +283,77 @@ class LogEntryWidget extends StatelessWidget {
       return describeIdentity(object);
     }
 
-    return toJson(log.error!);
+    return JsonEncoder.withIndent('  ', toEncodable).convert(object);
+    // ignore: avoid_catches_without_on_clauses
+  } catch (_) {}
+
+  try {
+    return '$object'.trim();
+    // ignore: avoid_catches_without_on_clauses
+  } catch (_) {}
+  return describeIdentity(object);
+}
+
+dynamic _errorToJsonListOrMap(Log log) {
+  bool isJson(Object? object) {
+    if (object == null || object is bool || object is num || object is String) {
+      return true;
+    }
+    if (object is List) return object.every(isJson);
+    if (object is Map) {
+      return object.keys.every((it) => it is String) &&
+          object.values.every(isJson);
+    }
+
+    try {
+      // ignore: avoid_dynamic_calls
+      (object as dynamic).toJson();
+      return true;
+      // ignore: avoid_catches_without_on_clauses
+    } catch (_) {}
+    return false;
   }
 
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-    properties.add(DiagnosticsProperty<Log>('log', log));
+  bool isJsonListOrMap(Object? object) {
+    if (object is List || object is Map) return isJson(object);
+
+    try {
+      // ignore: avoid_dynamic_calls
+      return isJsonListOrMap((object as dynamic).toJson());
+      // ignore: avoid_catches_without_on_clauses
+    } catch (_) {}
+    return false;
   }
+
+  if (!isJsonListOrMap(log.error!)) return null;
+
+  dynamic toJson(Object? object) {
+    if (object == null || object is bool || object is num || object is String) {
+      return object;
+    }
+    if (object is List) return object.map(toJson).toList();
+    if (object is Map) {
+      final entries = <String, dynamic>{};
+      for (final entry in object.entries) {
+        if (entry.key is! String) return null;
+        entries[entry.key as String] = toJson(entry.value);
+      }
+      return entries;
+    }
+
+    try {
+      // ignore: avoid_dynamic_calls
+      return toJson((object as dynamic).toJson());
+      // ignore: avoid_catches_without_on_clauses
+    } catch (_) {}
+    try {
+      return '$object';
+      // ignore: avoid_catches_without_on_clauses
+    } catch (_) {}
+    return describeIdentity(object);
+  }
+
+  return toJson(log.error!);
 }
 
 class _LogEntryLine extends StatelessWidget {

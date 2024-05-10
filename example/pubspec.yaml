@@ -2,8 +2,8 @@ name: debug_overlay_example
 publish_to: none
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
-  flutter: '>=3.10.0'
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.10.0"
 
 dependencies:
   flutter:
@@ -16,7 +16,7 @@ dev_dependencies:
     git:
       url: https://github.com/JonasWanke/supernova.git
       path: supernova_flutter
-      ref: d863bb61d8a89cb2e23c6ac6f3510c80061d10b7
+      ref: 729c52099c0f6979af80b31b0102148cd967c8f4
 
 dependency_overrides:
   debug_overlay:
