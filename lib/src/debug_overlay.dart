@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:black_hole_flutter/black_hole_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:shake/shake.dart';
 
 import 'helpers/device_info.dart';
 import 'helpers/media_query.dart';
@@ -12,8 +11,6 @@ import 'helpers/package_info.dart';
 class DebugOverlay extends StatefulWidget {
   DebugOverlay({
     required this.child,
-    this.showOnShake = true,
-    this.createShakeDetector = _defaultCreateShakeDetector,
     this.enableOnlyInDebugMode = true,
   }) : super(key: DebugOverlayState.key);
 
@@ -35,9 +32,6 @@ class DebugOverlay extends StatefulWidget {
     helpers.value = [...helpers.value, debugHelper];
   }
 
-  static ShakeDetector _defaultCreateShakeDetector(VoidCallback onPhoneShake) =>
-      ShakeDetector.waitForStart(onPhoneShake: onPhoneShake);
-
   /// In debug mode, this returns a builder to add a [DebugOverlay] to your app.
   ///
   /// In profile and release builds, the returned builder doesn't add any
@@ -53,18 +47,9 @@ class DebugOverlay extends StatefulWidget {
   ///   home: MyHomePage(),
   /// )
   /// ```
-  ///
-  /// You can open the overlay by shaking your phone (if [showOnShake] is
-  /// `true`) or by calling [show] or [hide].
-  static TransitionBuilder builder({
-    bool showOnShake = true,
-    ShakeDetectorCreator createShakeDetector = _defaultCreateShakeDetector,
-    bool enableOnlyInDebugMode = true,
-  }) {
+  static TransitionBuilder builder({bool enableOnlyInDebugMode = true}) {
     return _isInDebugMode || !enableOnlyInDebugMode
         ? (context, child) => DebugOverlay(
-              showOnShake: showOnShake,
-              createShakeDetector: createShakeDetector,
               enableOnlyInDebugMode: enableOnlyInDebugMode,
               child: child,
             )
@@ -76,8 +61,6 @@ class DebugOverlay extends StatefulWidget {
 
   final Widget? child;
 
-  final bool showOnShake;
-  final ShakeDetectorCreator createShakeDetector;
   final bool enableOnlyInDebugMode;
 
   @override
@@ -85,65 +68,16 @@ class DebugOverlay extends StatefulWidget {
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties
-      ..add(DiagnosticsProperty('showOnShake', showOnShake))
-      ..add(ObjectFlagProperty.has('createShakeDetector', createShakeDetector))
-      ..add(
-        FlagProperty('enableOnlyInDebugMode', value: enableOnlyInDebugMode),
-      );
+    properties.add(
+      FlagProperty('enableOnlyInDebugMode', value: enableOnlyInDebugMode),
+    );
   }
 }
-
-typedef ShakeDetectorCreator = ShakeDetector Function(
-  VoidCallback onPhoneShake,
-);
 
 class DebugOverlayState extends State<DebugOverlay> {
   static final key = GlobalKey<DebugOverlayState>();
 
-  ShakeDetector? _shakeDetector;
   bool _isVisible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.showOnShake) _configureShakeDetector();
-  }
-
-  @override
-  void didUpdateWidget(DebugOverlay oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!oldWidget.showOnShake && widget.showOnShake) {
-      _configureShakeDetector();
-    } else if (oldWidget.showOnShake && !widget.showOnShake) {
-      assert(_shakeDetector != null);
-      _disposeShakeDetector();
-    } else if (widget.showOnShake &&
-        oldWidget.createShakeDetector != widget.createShakeDetector) {
-      assert(_shakeDetector != null);
-      _disposeShakeDetector();
-      _configureShakeDetector();
-    }
-  }
-
-  void _configureShakeDetector() {
-    assert(widget.showOnShake);
-    assert(_shakeDetector == null);
-
-    _shakeDetector ??= widget.createShakeDetector(show);
-    _shakeDetector!.startListening();
-  }
-
-  @override
-  void dispose() {
-    _disposeShakeDetector();
-    super.dispose();
-  }
-
-  void _disposeShakeDetector() {
-    _shakeDetector?.stopListening();
-    _shakeDetector = null;
-  }
 
   void show() => setState(() => _isVisible = true);
   void hide() => setState(() => _isVisible = false);
