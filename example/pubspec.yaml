@@ -11,13 +11,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-dev_dependencies:
-  supernova_flutter:
-    git:
-      url: https://github.com/JonasWanke/supernova.git
-      path: supernova_flutter
-      ref: 729c52099c0f6979af80b31b0102148cd967c8f4
-
 dependency_overrides:
   debug_overlay:
     path: ../

@@ -1,4 +1,3 @@
-import 'package:data_size/data_size.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 
@@ -6,7 +5,6 @@ Future<List<DiagnosticsNode>> getDiagnostics() async {
   assert(kIsWeb);
 
   final info = await DeviceInfoPlugin().webBrowserInfo;
-  final deviceMemory = info.deviceMemory;
   return [
     StringProperty('Platform', 'Web Browser'),
     DiagnosticsBlock(
@@ -49,12 +47,5 @@ Future<List<DiagnosticsNode>> getDiagnostics() async {
       defaultValue: 0,
     ),
     IntProperty('Logical CPU Cores', info.hardwareConcurrency),
-    // The doc comment says gigabytes, but it's actually imprecise gibibytes…
-    if (deviceMemory != null)
-      StringProperty(
-        'Memory Size',
-        (deviceMemory * 1024 * 1024 * 1024)
-            .formatByteSize(prefix: Prefix.binary),
-      ),
   ];
 }
