@@ -16,16 +16,19 @@ class MediaQueryDebugHelper extends StatelessWidget {
   }
 
   Future<List<DiagnosticsNode>> _getDiagnostics(BuildContext context) async {
+    // A SafeArea, ListView or Scaffold above zeroes insets in the nearest
+    // MediaQuery, so they come from the view.
+    final view = MediaQueryData.fromView(View.of(context));
     var data = MediaQuery.maybeOf(context);
     if (data == null) {
-      data = MediaQueryData.fromView(View.of(context));
+      data = view;
       if (!kReleaseMode) {
         data = data.copyWith(platformBrightness: debugBrightnessOverride);
       }
     }
 
     return [
-      DiagnosticsProperty('Size', data.size, defaultValue: Size.zero),
+      StringProperty('Size', _formatSize(data.size), quoted: false),
       DoubleProperty(
         'Device Pixel Ratio',
         data.devicePixelRatio,
@@ -38,26 +41,10 @@ class MediaQueryDebugHelper extends StatelessWidget {
         defaultValue: 1,
       ),
       EnumProperty('Platform Brightness', data.platformBrightness),
-      DiagnosticsProperty(
-        'Padding',
-        data.padding,
-        defaultValue: EdgeInsets.zero,
-      ),
-      DiagnosticsProperty(
-        'View Insets',
-        data.viewInsets,
-        defaultValue: EdgeInsets.zero,
-      ),
-      DiagnosticsProperty(
-        'System Gesture Insets',
-        data.systemGestureInsets,
-        defaultValue: EdgeInsets.zero,
-      ),
-      DiagnosticsProperty(
-        'View Padding',
-        data.viewPadding,
-        defaultValue: EdgeInsets.zero,
-      ),
+      _insetsProperty('Padding', view.padding),
+      _insetsProperty('View Insets', view.viewInsets),
+      _insetsProperty('System Gesture Insets', view.systemGestureInsets),
+      _insetsProperty('View Padding', view.viewPadding),
       FlagProperty(
         'Always use 24 Hour Format',
         value: data.alwaysUse24HourFormat,
@@ -95,4 +82,23 @@ class MediaQueryDebugHelper extends StatelessWidget {
       ),
     ];
   }
+}
+
+/// Formats [size] like [Size.toString], which release builds strip.
+String _formatSize(Size size) =>
+    'Size(${size.width.toStringAsFixed(1)}, ${size.height.toStringAsFixed(1)})';
+
+/// Formats [insets] like [EdgeInsets.toString], which release builds strip.
+///
+/// Zero insets count as the default value, so the default level hides them.
+StringProperty _insetsProperty(String name, EdgeInsets insets) {
+  String format(EdgeInsets it) =>
+      'EdgeInsets(${it.left.toStringAsFixed(1)}, ${it.top.toStringAsFixed(1)}, '
+      '${it.right.toStringAsFixed(1)}, ${it.bottom.toStringAsFixed(1)})';
+  return StringProperty(
+    name,
+    format(insets),
+    quoted: false,
+    defaultValue: format(EdgeInsets.zero),
+  );
 }

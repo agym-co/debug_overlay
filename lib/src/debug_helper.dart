@@ -55,8 +55,8 @@ class DebugHelper extends StatelessWidget {
 /// A [DebugHelper] that displays a [Stream] of [DiagnosticsNode]s and allows
 /// the user to filter them.
 ///
-/// Unfortunately, this widget only works in debug mode because stringifying of
-/// [DiagnosticsNode]s only works in debug mode.
+/// Release builds strip the `toString` of Flutter types like [Size]. Pass such
+/// values preformatted, for example as a [StringProperty].
 class DiagnosticsBasedDebugHelper extends StatefulWidget {
   const DiagnosticsBasedDebugHelper({
     super.key,
@@ -112,7 +112,7 @@ class _DiagnosticsBasedDebugHelperState
 
           final text = nodes
               .where((it) => it.level.index >= _minLevel.index)
-              .map((it) => it.toStringDeep(minLevel: _minLevel))
+              .map(_render)
               .join('\n');
           if (text.isEmpty) {
             return Center(
@@ -123,5 +123,24 @@ class _DiagnosticsBasedDebugHelperState
         },
       ),
     );
+  }
+
+  /// Renders [node] with its visible properties and children below it.
+  ///
+  /// [DiagnosticsNode.toStringDeep] renders nothing outside debug mode, and
+  /// [DiagnosticsNode.isFiltered] filters everything in release mode.
+  String _render(DiagnosticsNode node, [String indent = '']) {
+    final name = node.showName ? node.name : null;
+    final description = node.toDescription();
+    final line = [
+      if (name != null && name.isNotEmpty)
+        node.showSeparator && description.isNotEmpty ? '$name:' : name,
+      if (description.isNotEmpty) description,
+    ].join(' ');
+    return [
+      '$indent$line',
+      for (final child in [...node.getProperties(), ...node.getChildren()])
+        if (child.level.index >= _minLevel.index) _render(child, '$indent  '),
+    ].join('\n');
   }
 }
