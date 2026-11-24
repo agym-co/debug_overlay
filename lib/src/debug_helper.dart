@@ -62,10 +62,14 @@ class DiagnosticsBasedDebugHelper extends StatefulWidget {
     super.key,
     required this.title,
     required this.diagnosticsStream,
+    this.selectable = false,
   });
 
   final Widget title;
   final Stream<List<DiagnosticsNode>> diagnosticsStream;
+
+  /// Whether the rows can be selected, for example to copy a value.
+  final bool selectable;
 
   @override
   State<DiagnosticsBasedDebugHelper> createState() =>
@@ -74,6 +78,9 @@ class DiagnosticsBasedDebugHelper extends StatefulWidget {
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     properties.add(DiagnosticsProperty('diagnosticsStream', diagnosticsStream));
+    properties.add(
+      FlagProperty('selectable', value: selectable, ifTrue: 'selectable'),
+    );
   }
 }
 
@@ -119,7 +126,7 @@ class _DiagnosticsBasedDebugHelperState
               child: Text('Empty', style: context.textTheme.bodySmall),
             );
           }
-          return Text(text);
+          return widget.selectable ? SelectableText(text) : Text(text);
         },
       ),
     );

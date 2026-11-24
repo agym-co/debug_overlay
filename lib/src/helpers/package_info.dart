@@ -5,7 +5,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../debug_helper.dart';
 
 class PackageInfoDebugHelper extends StatelessWidget {
-  const PackageInfoDebugHelper({super.key});
+  const PackageInfoDebugHelper({super.key, this.selectable = false});
+
+  /// Whether the rows can be selected, for example to copy a value.
+  final bool selectable;
 
   @override
   Widget build(BuildContext context) {
@@ -13,6 +16,7 @@ class PackageInfoDebugHelper extends StatelessWidget {
       title: const Text('Package Info'),
       // ignore: discarded_futures, https://github.com/dart-lang/linter/issues/3429
       diagnosticsStream: _getDiagnostics().asStream(),
+      selectable: selectable,
     );
   }
 

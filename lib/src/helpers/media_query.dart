@@ -4,7 +4,10 @@ import 'package:flutter/widgets.dart';
 import '../debug_helper.dart';
 
 class MediaQueryDebugHelper extends StatelessWidget {
-  const MediaQueryDebugHelper({super.key});
+  const MediaQueryDebugHelper({super.key, this.selectable = false});
+
+  /// Whether the rows can be selected, for example to copy a value.
+  final bool selectable;
 
   @override
   Widget build(BuildContext context) {
@@ -12,6 +15,7 @@ class MediaQueryDebugHelper extends StatelessWidget {
       title: const Text('MediaQuery'),
       // ignore: discarded_futures, https://github.com/dart-lang/linter/issues/3429
       diagnosticsStream: _getDiagnostics(context).asStream(),
+      selectable: selectable,
     );
   }
 
